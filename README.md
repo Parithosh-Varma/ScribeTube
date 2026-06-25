@@ -8,7 +8,11 @@
 </p>
 
 <p align="center">
-  <i>by <strong>Parithosh Varma</strong></i>
+  <i>by <strong>Parithosh-Varma</strong></i>
+</p>
+
+<p align="center">
+  <a href="https://web-production-52ca6.up.railway.app/"><strong>🌐 Live Demo</strong></a>
 </p>
 
 <p align="center">
@@ -184,5 +188,5 @@ MIT — free for any use.
 ---
 
 <p align="center">
-  <sub>Made by <strong>Parithosh Varma</strong> · built with React, Flask, and a love for good prose.</sub>
+  <sub>Made by <strong>Parithosh-Varma</strong> · built with React, Flask, and a love for good prose.</sub>
 </p>
