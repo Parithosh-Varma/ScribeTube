@@ -28,7 +28,7 @@ export function ProfileCard() {
         <CardItem translateZ="100" className="w-full mt-4">
           <div className="flex items-center gap-4">
             <img
-              src="https://avatars.githubusercontent.com/u/Parithosh-Varma"
+              src="https://avatars.githubusercontent.com/u/277201506?v=4"
               height="100"
               width="100"
               className="h-24 w-24 rounded-full object-cover group-hover/card:shadow-xl"
