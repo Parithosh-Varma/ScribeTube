@@ -8,5 +8,5 @@ cmds = ["npm install", "python3 -m venv /app/.venv && /app/.venv/bin/pip install
 cmds = ["npm run build"]
 
 [start]
-cmd = "source /app/.venv/bin/activate && gunicorn server.server:app"
+cmd = "/app/.venv/bin/gunicorn server.server:app"
 
