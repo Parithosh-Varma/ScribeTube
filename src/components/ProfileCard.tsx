@@ -48,7 +48,7 @@ export function ProfileCard() {
             translateZ={20}
             as="a"
             href="https://github.com/Parithosh-Varma"
-            target="__blank"
+            target="_blank"
             className="px-4 py-2 rounded-xl text-xs font-normal dark:text-white flex items-center gap-2"
           >
             <GithubIcon /> GitHub →
@@ -57,7 +57,7 @@ export function ProfileCard() {
             translateZ={20}
             as="a"
             href="https://web-production-52ca6.up.railway.app/"
-            target="__blank"
+            target="_blank"
             className="px-4 py-2 rounded-xl bg-black dark:bg-white dark:text-black text-white text-xs font-bold"
           >
             Try ScribeTube
