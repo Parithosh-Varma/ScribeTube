@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["python3", "python3Packages.pip"]
+nixPkgs = ["python3", "python3Packages.pip", "python3Packages.setuptools"]
 
 [phases.install]
-cmds = ["pip3 install -r requirements.txt"]
+cmds = ["python3 -m venv /app/.venv && /app/.venv/bin/pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn server.server:app"
+cmd = "/app/.venv/bin/gunicorn server.server:app"
