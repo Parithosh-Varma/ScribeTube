@@ -1,20 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ─── Design Tokens ─── */
 @theme {
+  --color-reading-room: #20242B;
+  --color-reading-room-light: #2B2F38;
+  --color-manuscript: #F8F4E8;
+  --color-manuscript-warm: #EDE7D4;
+  --color-oxblood: #8B3A3A;
+  --color-oxblood-hover: #A04545;
+  --color-oxblood-dark: #6B2D2D;
+  --color-brass: #C9A463;
+  --color-brass-light: #D4B57A;
+  --color-brass-dim: #A88A4E;
+  --color-graphite: #1C1E22;
+  --color-faded-ink: #9CA0AA;
+  --color-warm-white: #FFFDF7;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
   --animate-fade-in: fade-in 0.4s ease-out;
-  --animate-scale-up: scale-up 0.2s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-stamp: stamp 0.15s ease-out;
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scale-up {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
 }
 
 @keyframes slide-up {
@@ -22,14 +35,83 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.font-serif-book { font-family: 'Lora', Georgia, serif; }
-.font-serif-display { font-family: 'Playfair Display', 'Cinzel', Garamond, serif; }
-.font-sans-book { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-.font-mono-book { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-
-@media print {
-  body { background-color: white !important; color: black !important; }
+@keyframes stamp {
+  0% { transform: scale(1.04); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
 }
 
-* { scrollbar-width: thin; scrollbar-color: #d4d4d4 transparent; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Base ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background-color: var(--color-reading-room);
+  color: var(--color-manuscript);
+}
+
+/* ─── Dark mode (default) ─── */
+.dark {
+  color-scheme: dark;
+}
+
+/* ─── Light mode ─── */
+.light body,
+.light {
+  background-color: var(--color-manuscript);
+  color: var(--color-graphite);
+}
+
+/* ─── Typography classes ─── */
+.font-display { font-family: var(--font-display); }
+.font-ui { font-family: var(--font-ui); }
+.font-mono { font-family: var(--font-mono); }
+
+/* ─── Scrollbar ─── */
+* { scrollbar-width: thin; }
 .dark * { scrollbar-color: #3f3f46 transparent; }
+.light * { scrollbar-color: #c9c4b8 transparent; }
+
+/* ─── Focus states: brass ring ─── */
+:focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Print ─── */
+@media print {
+  body { background: white !important; color: black !important; }
+}
+
+/* ─── Custom scrollbar for webkit ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+.dark ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+.light ::-webkit-scrollbar-thumb { background: #c9c4b8; border-radius: 3px; }
+
+/* ─── Book spine text helper ─── */
+.writing-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}

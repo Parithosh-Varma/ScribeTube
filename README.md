@@ -1,6 +1,10 @@
 <p align="center">
-  <br>
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=500&color=F59E0B&center=true&vCenter=true&width=600&lines=ScribeTube;YouTube+%E2%86%92+Polished+Book+Chapters;From+Speech+to+Prose" alt="ScribeTube" />
+  <img src="src/LOGO/logo.png" alt="ScribeTube" width="80">
+</p>
+
+<p align="center">
+  <strong style="font-size:24px">ScribeTube</strong><br>
+  <i>YouTube → Polished Book Chapter</i>
 </p>
 
 <p align="center">
@@ -26,10 +30,6 @@
 </p>
 
 <br>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
-</p>
 
 ## ⚡ One-liner
 
@@ -60,27 +60,15 @@ npm install
 npm run dev
 ```
 
+Or start both at once:
+
+```bash
+npm start
+```
+
 Open **http://localhost:5173** and paste a YouTube URL.
 
 ---
-
-## 🎯 Presets — No Setup Required
-
-Click any card in the app to load an instant formatted chapter (zero config):
-
-| Video | Speaker | Chapter Title |
-|-------|---------|--------------|
-| `UF8uR6Z6KLc` | **Steve Jobs** | *Stay Hungry, Stay Foolish* |
-| `zjkBMFhNj_g` | **Andrej Karpathy** | *The Architecture of Digital Minds* |
-| `ikAb-NYkseI` | **Neil Gaiman** | *The Mountain in the Distance* |
-| `u4ZoJKF_VuA` | **Simon Sinek** | *The Golden Circle of Leadership* |
-| `wHGqp8bsh9E` | **J.K. Rowling** | *The Architecture of Empathy and Failure* |
-
----
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
-</p>
 
 ## 🏗 Architecture
 
@@ -113,17 +101,19 @@ Click any card in the app to load an instant formatted chapter (zero config):
 ## 🗂 Project Layout
 
 ```
-scribe-tube/
+youtube-transcript-book-converter/
 ├── server/
-│   └── server.py              # 55 lines — transcript & metadata API
+│   └── server.py              # Flask backend — transcript & metadata API
 ├── src/
-│   ├── App.tsx                # Main UI (~1300 lines)
+│   ├── App.tsx                # Main UI
 │   ├── main.tsx               # Entry point
-│   ├── index.css              # Tailwind v4 + custom animations
+│   ├── index.css              # Tailwind v4 + design tokens
+│   ├── LOGO/
+│   │   └── logo.png           # App logo
 │   ├── data/
-│   │   └── presets.ts         # 5 premium speech presets
+│   │   └── presets.ts         # (empty — presets removed)
 │   └── utils/
-│       ├── transcript.ts      # ID extraction + fetching
+│       ├── transcript.ts      # ID extraction, fetching, local formatter
 │       ├── ai.ts              # AI provider configs + API calls
 │       ├── markdown.ts        # Markdown → styled HTML
 │       └── cn.ts              # Tailwind class merger
@@ -138,18 +128,19 @@ scribe-tube/
 
 ## 🎨 UI Highlights
 
-- **Dark/Light theme** — persists in localStorage
-- **Typography engine** — 3 fonts (serif/sans/mono), 4 sizes, 4 paper colors
-- **Pipeline console** — animated step progress + live terminal logs
+- **Literary design system** — Fraunces serif, Inter UI, JetBrains Mono for raw data
+- **Editing desk layout** — narrow Configure rail + wide Manuscript Page panel
+- **Before/after strip** — visualizes raw transcript → polished prose transformation
+- **Dark/Light theme** — Reading Room dark, Manuscript Page light
+- **Oxblood + Brass palette** — book-cover aesthetic, not SaaS dashboard
+- **Stamp press button** — Generate button clicks down like a printing press
 - **Smart first-letter drop-cap** — in serif book mode
 - **Searchable captions** — filter transcript segments by keyword
-- **Stylish print output** — clean A4 formatting with elegant dividing ornaments
+- **PDF print output** — clean A4 formatting with elegant dividing ornaments
+- **Reduced motion** — respects `prefers-reduced-motion`
+- **Brass focus states** — keyboard navigation with brass ring outlines
 
 ---
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
-</p>
 
 ## ⚙️ Configuration
 
@@ -158,7 +149,7 @@ AI Provider   →  Local / Anthropic / OpenAI / Gemini
 API Key       →  Stored in localStorage (never leaves your browser)
 Font          →  Serif / Sans / Mono
 Font Size     →  SM / BASE / LG / XL
-Paper         →  Cream / White / Stone / Dark
+Theme         →  Dark (Reading Room) / Light (Manuscript Page)
 ```
 
 ---
@@ -169,7 +160,7 @@ Paper         →  Cream / White / Stone / Dark
 npm run build
 ```
 
-Outputs a **single self-contained `dist/index.html`** (~370 KB) with everything inlined. Deploy anywhere.
+Outputs a **single self-contained `dist/index.html`** with everything inlined. Deploy anywhere.
 
 ---
 
@@ -177,11 +168,10 @@ Outputs a **single self-contained `dist/index.html`** (~370 KB) with everything 
 
 Ideas for next-level stuff:
 
-- 🤖 More AI providers (Groq, Ollama, Mistral)
-- 🎙 Speaker diarization from transcript
-- 📖 EPUB / MOBI export
-- 📱 Better mobile layout
-- 🌍 Multi-language caption support
+- More AI providers (Groq, Ollama, Mistral)
+- Speaker diarization from transcript
+- EPUB / MOBI export
+- Multi-language caption support
 
 PRs welcome.
 
@@ -195,6 +185,4 @@ MIT — free for any use.
 
 <p align="center">
   <sub>Made by <strong>Parithosh Varma</strong> · built with React, Flask, and a love for good prose.</sub>
-  <br>
-  <sub><i>"The best way to learn is to read. The best way to remember is to write."</i></sub>
 </p>

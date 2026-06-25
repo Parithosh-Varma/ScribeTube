@@ -1,11 +1,10 @@
 /**
- * A lightweight, highly performant markdown parser tailored for elegant book formatting.
- * Turns standard markdown into styled HTML with academic typographic accents.
+ * A lightweight markdown parser tailored for elegant book formatting.
+ * Outputs styled HTML with the ScribeTube design system colors.
  */
 export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' | 'mono' = 'serif'): string {
   if (!markdown) return "";
 
-  // Split into lines
   const lines = markdown.split(/\r?\n/);
   let html = "";
   let inList = false;
@@ -14,7 +13,6 @@ export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' 
   let codeContent: string[] = [];
   let isFirstParagraph = true;
 
-  // Track if we need to close a list
   const closeListIfOpen = () => {
     if (inList && listType) {
       html += `</${listType}>\n`;
@@ -27,15 +25,13 @@ export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' 
     const line = lines[i];
     const trimmed = line.trim();
 
-    // 1. Code Block Handling
+    // Code Block
     if (trimmed.startsWith("```")) {
       if (inCodeBlock) {
-        // Close code block
         inCodeBlock = false;
-        html += `<pre class="bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4 font-mono text-xs text-gray-700 dark:text-zinc-300 overflow-x-auto my-6 whitespace-pre-wrap"><code>${codeContent.join("\n")}</code></pre>\n`;
+        html += `<pre style="background:#EDE7D4;border:1px solid #C9A463;border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#1C1E22;overflow-x:auto;margin:24px 0;white-space:pre-wrap"><code>${codeContent.join("\n")}</code></pre>\n`;
         codeContent = [];
       } else {
-        // Open code block
         closeListIfOpen();
         inCodeBlock = true;
       }
@@ -43,66 +39,54 @@ export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' 
     }
 
     if (inCodeBlock) {
-      // Escape HTML tags in code blocks
-      const escapedLine = line
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+      const escapedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       codeContent.push(escapedLine);
       continue;
     }
 
-    // 2. Horizontal Rule / Literary Ornament
+    // Horizontal Rule
     if (trimmed === "---" || trimmed === "***") {
       closeListIfOpen();
-      // Render an elegant literary separator
-      html += `
-        <div class="flex items-center justify-center my-10 py-2">
-          <div class="h-[1px] w-20 bg-gradient-to-r from-transparent to-amber-600/50 dark:to-amber-500/50"></div>
-          <span class="mx-4 text-amber-600 dark:text-amber-500 font-serif text-sm tracking-[0.25em]">❖ ❖ ❖</span>
-          <div class="h-[1px] w-20 bg-gradient-to-l from-transparent to-amber-600/50 dark:to-amber-500/50"></div>
-        </div>
-      \n`;
+      html += `<div style="display:flex;align-items:center;justify-content:center;margin:40px 0"><div style="height:1px;width:80px;background:linear-gradient(to right,transparent,#C9A463)"></div><span style="margin:0 16px;color:#C9A463;font-family:'Fraunces',Georgia,serif;font-size:14px;letter-spacing:0.25em">&#10045; &#10045; &#10045;</span><div style="height:1px;width:80px;background:linear-gradient(to left,transparent,#C9A463)"></div></div>\n`;
       continue;
     }
 
-    // 3. Headings
+    // Headings
     if (trimmed.startsWith("# ")) {
       closeListIfOpen();
       const titleText = inlineFormat(trimmed.substring(2));
-      html += `<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-50 text-center font-serif mt-4 mb-8 leading-tight">${titleText}</h1>\n`;
+      html += `<h1 style="font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:700;letter-spacing:-0.02em;color:#1C1E22;text-align:center;margin:16px 0 32px;line-height:1.2">${titleText}</h1>\n`;
       continue;
     }
 
     if (trimmed.startsWith("## ")) {
       closeListIfOpen();
       const h2Text = inlineFormat(trimmed.substring(3));
-      html += `<h2 class="text-xl md:text-2xl font-bold text-gray-800 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800 pb-2 font-serif mt-12 mb-5 leading-snug tracking-wide">${h2Text}</h2>\n`;
+      html += `<h2 style="font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;color:#1C1E22;border-bottom:1px solid #C9A463;padding-bottom:8px;margin:48px 0 20px;letter-spacing:0.05em;text-transform:uppercase">${h2Text}</h2>\n`;
       continue;
     }
 
     if (trimmed.startsWith("### ")) {
       closeListIfOpen();
       const h3Text = inlineFormat(trimmed.substring(4));
-      html += `<h3 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-zinc-200 font-serif mt-8 mb-4">${h3Text}</h3>\n`;
+      html += `<h3 style="font-family:'Fraunces',Georgia,serif;font-size:18px;font-weight:600;color:#1C1E22;margin:32px 0 16px">${h3Text}</h3>\n`;
       continue;
     }
 
-    // 4. Blockquotes
+    // Blockquotes
     if (trimmed.startsWith("> ")) {
       closeListIfOpen();
       const quoteText = inlineFormat(trimmed.substring(2));
-      html += `<blockquote class="border-l-4 border-amber-600 dark:border-amber-500 bg-amber-50/40 dark:bg-amber-950/10 pl-6 pr-4 py-3 italic my-8 text-gray-700 dark:text-zinc-300 font-serif rounded-r-lg">${quoteText}</blockquote>\n`;
+      html += `<blockquote style="border-left:4px solid #8B3A3A;background:rgba(139,58,58,0.05);padding:12px 24px;font-style:italic;margin:32px 0;color:#8A8D93;font-family:'Fraunces',Georgia,serif;border-radius:0 8px 8px 0">${quoteText}</blockquote>\n`;
       continue;
     }
 
-    // 5. Lists (Ordered / Unordered)
-    // Ordered lists (e.g., "1. Item")
+    // Ordered lists
     const olMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
     if (olMatch) {
       if (!inList || listType !== "ol") {
         closeListIfOpen();
-        html += `<ol class="list-decimal pl-6 my-6 space-y-3 text-gray-700 dark:text-zinc-300 leading-relaxed font-serif">\n`;
+        html += `<ol style="list-style-type:decimal;padding-left:24px;margin:24px 0;display:flex;flex-direction:column;gap:12px;color:#1C1E22;line-height:1.7;font-family:'Fraunces',Georgia,serif">\n`;
         inList = true;
         listType = "ol";
       }
@@ -110,12 +94,12 @@ export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' 
       continue;
     }
 
-    // Unordered lists (e.g., "- Item", "* Item")
+    // Unordered lists
     const ulMatch = trimmed.match(/^[-*]\s+(.*)/);
     if (ulMatch) {
       if (!inList || listType !== "ul") {
         closeListIfOpen();
-        html += `<ul class="list-disc pl-6 my-6 space-y-3 text-gray-700 dark:text-zinc-300 leading-relaxed font-serif">\n`;
+        html += `<ul style="list-style-type:disc;padding-left:24px;margin:24px 0;display:flex;flex-direction:column;gap:12px;color:#1C1E22;line-height:1.7;font-family:'Fraunces',Georgia,serif">\n`;
         inList = true;
         listType = "ul";
       }
@@ -123,56 +107,52 @@ export function parseMarkdownToHtml(markdown: string, styling: 'serif' | 'sans' 
       continue;
     }
 
-    // 6. Paragraph or Empty line
+    // Empty line
     if (trimmed === "") {
       closeListIfOpen();
       continue;
     }
 
-    // It's a standard text block
+    // Standard paragraph
     closeListIfOpen();
     let pContent = inlineFormat(trimmed);
-    
-    // Apply drop-cap styling if it's the very first paragraph of a serif book chapter
+
     if (isFirstParagraph && styling === 'serif' && pContent.length > 50 && !pContent.startsWith("<") && !pContent.startsWith("*")) {
       const firstLetter = pContent.charAt(0);
       const remaining = pContent.substring(1);
-      html += `<p class="text-lg text-gray-800 dark:text-zinc-200 leading-relaxed font-serif mb-6 first-letter:text-5xl first-letter:font-bold first-letter:text-amber-600 dark:first-letter:text-amber-500 first-letter:mr-3 first-letter:float-left first-letter:leading-none first-letter:mt-1">${firstLetter}${remaining}</p>\n`;
+      html += `<p style="font-family:'Fraunces',Georgia,serif;font-size:18px;color:#1C1E22;line-height:1.75;margin-bottom:24px;text-align:justify"><span style="font-size:56px;font-weight:700;color:#8B3A3A;float:left;line-height:44px;padding-right:10px;padding-top:4px;font-family:'Fraunces',Georgia,serif">${firstLetter}</span>${remaining}</p>\n`;
       isFirstParagraph = false;
     } else {
-      html += `<p class="text-lg text-gray-800 dark:text-zinc-200 leading-relaxed font-serif mb-6">${pContent}</p>\n`;
+      html += `<p style="font-family:'Fraunces',Georgia,serif;font-size:18px;color:#1C1E22;line-height:1.75;margin-bottom:24px;text-align:justify">${pContent}</p>\n`;
       isFirstParagraph = false;
     }
   }
 
-  // Close any unclosed list at the end
   closeListIfOpen();
-
   return html;
 }
 
 /**
- * Format inline elements like bold, italics, links, and code snippets
+ * Format inline elements: bold, italics, links, code
  */
 function inlineFormat(text: string): string {
   if (!text) return "";
 
   let result = text
-    // Escape HTML tags to prevent broken nodes except if they are explicitly part of our builder
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bold (**text** or __text__)
-  result = result.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>');
-  result = result.replace(/__(.*?)__/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>');
+  // Bold
+  result = result.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:#1C1E22">$1</strong>');
+  result = result.replace(/__(.*?)__/g, '<strong style="font-weight:700;color:#1C1E22">$1</strong>');
 
-  // Italics (*text* or _text_)
-  result = result.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
-  result = result.replace(/_(.*?)_/g, '<em class="italic">$1</em>');
+  // Italics
+  result = result.replace(/\*(.*?)\*/g, '<em style="font-style:italic">$1</em>');
+  result = result.replace(/_(.*?)_/g, '<em style="font-style:italic">$1</em>');
 
-  // Inline code (`code`)
-  result = result.replace(/`(.*?)`/g, '<code class="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800 rounded px-1.5 py-0.5 font-mono text-sm text-amber-600 dark:text-amber-400">$1</code>');
+  // Inline code
+  result = result.replace(/`(.*?)`/g, '<code style="background:#EDE7D4;border:1px solid #C9A463;border-radius:4px;padding:2px 6px;font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#8B3A3A">$1</code>');
 
   return result;
 }

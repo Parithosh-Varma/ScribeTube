@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "python3 server/server.py",
+    "start": "python3 server/server.py & vite",
     "build": "vite build",
     "preview": "vite preview"
   },
