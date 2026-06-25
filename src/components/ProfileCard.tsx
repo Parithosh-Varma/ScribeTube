@@ -26,13 +26,22 @@ export function ProfileCard() {
           Developer who builds tools that bridge the gap between raw data and human-readable content.
         </CardItem>
         <CardItem translateZ="100" className="w-full mt-4">
-          <img
-            src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            height="1000"
-            width="1000"
-            className="h-60 w-full object-cover rounded-xl group-hover/card:shadow-xl"
-            alt="thumbnail"
-          />
+          <div className="flex items-center gap-4">
+            <img
+              src="https://avatars.githubusercontent.com/u/Parithosh-Varma"
+              height="100"
+              width="100"
+              className="h-24 w-24 rounded-full object-cover group-hover/card:shadow-xl"
+              alt="Parithosh-Varma"
+            />
+            <img
+              src="/logo.png"
+              height="100"
+              width="100"
+              className="h-24 w-24 object-contain group-hover/card:shadow-xl"
+              alt="ScribeTube"
+            />
+          </div>
         </CardItem>
         <div className="flex justify-between items-center mt-20">
           <CardItem
