@@ -1,157 +1,200 @@
-# ScribeTube
-
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-green" />
+  <br>
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=500&color=F59E0B&center=true&vCenter=true&width=600&lines=ScribeTube;YouTube+%E2%86%92+Polished+Book+Chapters;From+Speech+to+Prose" alt="ScribeTube" />
 </p>
 
 <p align="center">
-  <strong>Turn any YouTube video into a polished, readable book chapter.</strong><br>
-  Paste a URL → fetch transcript locally → get formatted Markdown with headers, clean prose &amp; key takeaways.
+  <i>by <strong>Parithosh Varma</strong></i>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-000?logo=react&logoColor=61DAFB&labelColor=111" />
+  <img src="https://img.shields.io/badge/Vite-7-000?logo=vite&logoColor=646CFF&labelColor=111" />
+  <img src="https://img.shields.io/badge/Tailwind-4-000?logo=tailwindcss&logoColor=06B6D4&labelColor=111" />
+  <img src="https://img.shields.io/badge/TypeScript-5-000?logo=typescript&logoColor=3178C6&labelColor=111" />
+  <img src="https://img.shields.io/badge/Python-3.9-000?logo=python&logoColor=3776AB&labelColor=111" />
+  <img src="https://img.shields.io/badge/Flask-3-000?logo=flask&logoColor=white&labelColor=111" />
+  <img src="https://img.shields.io/badge/license-MIT-000?labelColor=111&color=green" />
+</p>
+
+<br>
+
+<p align="center">
+  <strong>Turn any YouTube video into a beautifully formatted book chapter.</strong><br>
+  Paste a link → fetch the transcript → instantly generate structured prose with headers, takeaways & clean typography.<br>
+  No API key required. Runs locally.
+</p>
+
+<br>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
+</p>
+
+## ⚡ One-liner
+
+> YouTube transcript in, polished book chapter out. No API keys needed. No cloud dependencies. Just Python + React.
+
 ---
 
-## ✨ Features
+## ✨ What It Does
 
-| Feature | Description |
-|---------|-------------|
-| **Local transcript fetching** | Python backend uses `youtube-transcript-api` — no CORS issues, no fragile proxies |
-| **AI-powered formatting** | Optional: Anthropic Claude, OpenAI GPT, Google Gemini (bring your own key) |
-| **Zero-key local formatter** | Built-in smart heuristic editor works completely offline |
-| **Curated presets** | 5 famous speeches load instantly (Jobs, Karpathy, Gaiman, Sinek, Rowling) |
-| **Split workspace** | Video player · searchable timestamped transcript · formatted chapter |
-| **Typography controls** | Serif / Sans / Mono · 4 sizes · Cream / White / Stone / Dark paper |
-| **Export** | Copy plain text · Copy Markdown · Download `.md` · Print to PDF |
+| Capability | How |
+|------------|-----|
+| **Fetch any YouTube transcript** | Local Python backend → `youtube-transcript-api` → no CORS, no rate limits, no proxies |
+| **Format into a book chapter** | AI (Claude/GPT/Gemini) **or** built-in local heuristic editor — your choice |
+| **Explore interactively** | Split workspace with video player, timestamped caption browser, and live chapter preview |
+| **Export cleanly** | Plain text · Markdown · `.md` file · PDF print with full typographic control |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 One-Minute Setup
 
 ```bash
-# 1. Frontend deps
-npm install
-
-# 2. Backend deps
+# Terminal 1 — Backend
 pip3 install youtube-transcript-api flask flask-cors
+python3 server/server.py
 
-# 3. Run both (separate terminals)
-python3 server/server.py   # http://localhost:8080
-npm run dev                # http://localhost:5173
+# Terminal 2 — Frontend
+npm install
+npm run dev
 ```
 
-Open **http://localhost:5173** 🎉
+Open **http://localhost:5173** and paste a YouTube URL.
 
 ---
 
-## 🎯 Presets (Instant, No API Key)
+## 🎯 Presets — No Setup Required
 
-| Video | Speaker | Event |
-|-------|---------|-------|
-| `UF8uR6Z6KLc` | Steve Jobs | Stanford 2005 Commencement |
-| `zjkBMFhNj_g` | Andrej Karpathy | Intro to Large Language Models |
-| `ikAb-NYkseI` | Neil Gaiman | "Make Good Art" — UArts 2012 |
-| `u4ZoJKF_VuA` | Simon Sinek | TED: Start With Why |
-| `wHGqp8bsh9E` | J.K. Rowling | Harvard 2008 Commencement |
+Click any card in the app to load an instant formatted chapter (zero config):
 
-Click any preset card → instant formatted chapter.
+| Video | Speaker | Chapter Title |
+|-------|---------|--------------|
+| `UF8uR6Z6KLc` | **Steve Jobs** | *Stay Hungry, Stay Foolish* |
+| `zjkBMFhNj_g` | **Andrej Karpathy** | *The Architecture of Digital Minds* |
+| `ikAb-NYkseI` | **Neil Gaiman** | *The Mountain in the Distance* |
+| `u4ZoJKF_VuA` | **Simon Sinek** | *The Golden Circle of Leadership* |
+| `wHGqp8bsh9E` | **J.K. Rowling** | *The Architecture of Empathy and Failure* |
 
 ---
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
+</p>
 
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend (React 19 + Vite + Tailwind v4)                  │
-│  ├── Video input, provider config, theme controls          │
-│  ├── Pipeline log console (animated steps)                 │
-│  ├── Split workspace: Player | Transcript | Chapter        │
-│  └── Export: Copy / Download / Print                       │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ fetch("/api/transcript?v=...")
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Backend (Flask + youtube-transcript-api)                  │
-│  ├── GET /api/transcript?v=<id> → [{text,start,dur}, ...]  │
-│  └── GET /api/metadata?v=<id>  → {title,channel,thumb...}  │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    ▼             ▼
-            ┌───────────┐   ┌───────────┐
-            │  Local    │   │  AI APIs  │
-            │  Formatter│   │ (optional)│
-            └───────────┘   └───────────┘
+                         ┌──────────────────┐
+                         │   Browser (5173) │
+                         │  React 19 + Vite │
+                         └────────┬─────────┘
+                                  │ GET /api/transcript?v=xxx
+                                  │ GET /api/metadata?v=xxx
+                                  ▼
+                         ┌──────────────────┐
+                         │  Flask Backend   │
+                         │  (localhost:8080)│
+                         │ youtube-transcript-api
+                         └────────┬─────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+           ┌────────────────┐          ┌────────────────┐
+           │  Local Editor  │          │  AI Providers   │
+           │  (no key)      │          │  (optional)     │
+           │  Heuristic MD  │          │  Claude / GPT   │
+           │  formatting    │          │  / Gemini       │
+           └────────────────┘          └────────────────┘
 ```
 
 ---
 
-## 📦 Project Structure
+## 🗂 Project Layout
 
 ```
-.
+scribe-tube/
 ├── server/
-│   └── server.py              # Flask API (transcript + metadata)
+│   └── server.py              # 55 lines — transcript & metadata API
 ├── src/
-│   ├── App.tsx                # Main component (~1300 lines)
+│   ├── App.tsx                # Main UI (~1300 lines)
 │   ├── main.tsx               # Entry point
-│   ├── index.css              # Tailwind v4 + fonts + animations
+│   ├── index.css              # Tailwind v4 + custom animations
 │   ├── data/
-│   │   └── presets.ts         # 5 curated speech presets
+│   │   └── presets.ts         # 5 premium speech presets
 │   └── utils/
-│       ├── transcript.ts      # YouTube ID, fetch transcript/metadata
-│       ├── ai.ts              # Anthropic/OpenAI/Gemini via corsproxy.io
-│       ├── markdown.ts        # Markdown → styled HTML parser
-│       └── cn.ts              # clsx + tailwind-merge helper
+│       ├── transcript.ts      # ID extraction + fetching
+│       ├── ai.ts              # AI provider configs + API calls
+│       ├── markdown.ts        # Markdown → styled HTML
+│       └── cn.ts              # Tailwind class merger
+├── .gitignore
 ├── index.html
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
-└── .gitignore
+└── vite.config.ts
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🎨 UI Highlights
 
-- **API keys** → stored in `localStorage` per provider (never leave your browser)
-- **Theme, font, paper** → persist in `localStorage`
-- **Model selection** → auto-saves per provider
+- **Dark/Light theme** — persists in localStorage
+- **Typography engine** — 3 fonts (serif/sans/mono), 4 sizes, 4 paper colors
+- **Pipeline console** — animated step progress + live terminal logs
+- **Smart first-letter drop-cap** — in serif book mode
+- **Searchable captions** — filter transcript segments by keyword
+- **Stylish print output** — clean A4 formatting with elegant dividing ornaments
 
 ---
 
-## 📦 Production Build
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/colored.png" width="100%">
+</p>
+
+## ⚙️ Configuration
+
+```
+AI Provider   →  Local / Anthropic / OpenAI / Gemini
+API Key       →  Stored in localStorage (never leaves your browser)
+Font          →  Serif / Sans / Mono
+Font Size     →  SM / BASE / LG / XL
+Paper         →  Cream / White / Stone / Dark
+```
+
+---
+
+## 📦 Build for Production
 
 ```bash
 npm run build
 ```
 
-Outputs a **single self-contained `dist/index.html`** (~370 KB gzipped) via `vite-plugin-singlefile`. Deploy anywhere static hosting works.
+Outputs a **single self-contained `dist/index.html`** (~370 KB) with everything inlined. Deploy anywhere.
 
 ---
 
 ## 🤝 Contributing
 
-PRs welcome! Areas that'd love help:
+Ideas for next-level stuff:
 
-- More AI providers (Groq, Together, local LLMs via Ollama)
-- Better transcript segment merging / speaker diarization
-- EPUB export
-- Mobile layout polish
+- 🤖 More AI providers (Groq, Ollama, Mistral)
+- 🎙 Speaker diarization from transcript
+- 📖 EPUB / MOBI export
+- 📱 Better mobile layout
+- 🌍 Multi-language caption support
+
+PRs welcome.
 
 ---
 
 ## 📄 License
 
-MIT — do whatever you want.
+MIT — free for any use.
 
 ---
 
 <p align="center">
-  <sub>Built with ❤️ for anyone who learns better by reading than watching.</sub>
+  <sub>Made by <strong>Parithosh Varma</strong> · built with React, Flask, and a love for good prose.</sub>
+  <br>
+  <sub><i>"The best way to learn is to read. The best way to remember is to write."</i></sub>
 </p>
