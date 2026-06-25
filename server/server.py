@@ -1,9 +1,23 @@
-from flask import Flask, jsonify, request
+import os
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../dist", static_url_path="")
 CORS(app)
+
+
+@app.route("/")
+def index():
+    return send_from_directory(app.static_folder, "index.html")
+
+
+@app.route("/<path:path>")
+def static_proxy(path):
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.isfile(file_path):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, "index.html")
 
 @app.route("/api/transcript")
 def get_transcript():
@@ -11,11 +25,25 @@ def get_transcript():
     if not video_id or len(video_id) != 11:
         return jsonify({"error": "Invalid video ID"}), 400
 
+    api = YouTubeTranscriptApi()
     try:
-        api = YouTubeTranscriptApi()
-        transcript = api.fetch(video_id, languages=["en"])
+        transcript_list = api.list(video_id)
+        if not transcript_list:
+            return jsonify({"error": "No transcripts available for this video"}), 404
+
+        # Try English first
+        transcript = None
+        for t in transcript_list:
+            if t.language_code == "en":
+                transcript = t
+                break
+
+        # Fall back to first available
+        if not transcript:
+            transcript = list(transcript_list)[0]
+
         result = []
-        for seg in transcript:
+        for seg in transcript.fetch():
             result.append({
                 "text": seg.text,
                 "start": seg.start,

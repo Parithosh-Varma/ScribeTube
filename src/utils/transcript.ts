@@ -40,7 +40,8 @@ export function extractVideoId(url: string): string | null {
  */
 export async function fetchVideoMetadata(videoId: string): Promise<VideoMetadata> {
   try {
-    const res = await fetch(`http://localhost:8080/api/metadata?v=${videoId}`, {
+    const API_BASE = window.location.port === "5173" ? "http://localhost:8080" : "";
+    const res = await fetch(`${API_BASE}/api/metadata?v=${videoId}`, {
       signal: AbortSignal.timeout(5000),
     });
     if (res.ok) return await res.json();
@@ -99,7 +100,8 @@ async function fetchWithProxy(url: string): Promise<string> {
  * Primary method: Fetches transcript from the local Python backend.
  */
 async function fetchTranscriptFromBackend(videoId: string): Promise<TranscriptSegment[]> {
-  const res = await fetch(`http://localhost:8080/api/transcript?v=${videoId}`, {
+  const API_BASE = window.location.port === "5173" ? "http://localhost:8080" : "";
+  const res = await fetch(`${API_BASE}/api/transcript?v=${videoId}`, {
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) {
