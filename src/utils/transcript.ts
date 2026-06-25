@@ -77,6 +77,24 @@ export async function fetchVideoMetadata(videoId: string): Promise<VideoMetadata
   };
 }
 
+const PROXIES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+async function fetchWithProxy(url: string): Promise<string> {
+  for (const buildProxyUrl of PROXIES) {
+    try {
+      const proxyUrl = buildProxyUrl(url);
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+      if (res.ok) return await res.text();
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("All proxy services failed to fetch the YouTube page.");
+}
+
 /**
  * Primary method: Fetches transcript from the local Python backend.
  */
