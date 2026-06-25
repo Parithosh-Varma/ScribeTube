@@ -13,8 +13,6 @@
 
 <p align="center">
   <a href="https://web-production-52ca6.up.railway.app/"><strong>🌐 Live Demo</strong></a>
-  &nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="https://www.buymeacoffee.com/parithosh"><strong>☕ Buy Me a Coffee</strong></a>
 </p>
 
 <p align="center">
