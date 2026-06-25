@@ -8,6 +8,8 @@ import {
 import { extractVideoId, fetchVideoMetadata, fetchTranscript, formatLocalBookChapter, VideoMetadata, TranscriptSegment } from "./utils/transcript";
 import { aiProviders, generateBookChapter } from "./utils/ai";
 import { parseMarkdownToHtml } from "./utils/markdown";
+import { ProfileCard } from "./components/ProfileCard";
+import { MouseProvider } from "./components/ui/use-mouse";
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -170,6 +172,7 @@ export default function App() {
   const filteredSegments = transcriptSegments.filter(s => s.text.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
+    <MouseProvider>
     <div className={`min-h-screen flex flex-col ${isDark ? 'bg-reading-room text-manuscript' : 'bg-manuscript text-graphite'}`}>
 
       {/* ── HEADER ── */}
@@ -229,6 +232,9 @@ export default function App() {
               <button onClick={() => setActiveTab('input')} className="px-6 py-2.5 rounded-lg font-semibold text-sm bg-oxblood text-manuscript hover:bg-oxblood-hover active:animate-stamp transition-colors">
                 Get Started
               </button>
+            </div>
+            <div className="mt-8 flex justify-center">
+              <ProfileCard />
             </div>
           </div>
         </div>
@@ -549,5 +555,6 @@ export default function App() {
       )}
 
     </div>
+    </MouseProvider>
   );
 }
