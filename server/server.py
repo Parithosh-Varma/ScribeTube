@@ -5,6 +5,24 @@ import html
 import time
 import threading
 from datetime import datetime
+
+def _load_dotenv():
+    env_path = os.path.join(os.getcwd(), ".env")
+    if not os.path.isfile(env_path):
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+_load_dotenv()
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -445,7 +463,7 @@ def get_history():
     cur.execute("SELECT * FROM history ORDER BY created_at DESC LIMIT 50")
     rows = cur.fetchall()
     conn.close()
-    return jsonify([{k: str(v) if isinstance(v, datetime) else v for k, r in rows for k, v in [k, r]}] if rows else [])
+    return jsonify([{k: str(v) if isinstance(v, datetime) else v for k, v in row.items()} for row in rows])
 
 
 @app.route("/api/history", methods=["POST"])
