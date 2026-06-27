@@ -21,7 +21,7 @@ export default function App() {
     const saved = localStorage.getItem("scribetube_theme");
     return saved === "light" ? "light" : "dark";
   });
-  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help'>('input');
+  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help' | 'history'>('input');
   const [videoUrl, setVideoUrl] = useState("");
   const [provider, setProvider] = useState(() => localStorage.getItem("scribetube_provider") || "local");
   const [apiKey, setApiKey] = useState(() => {
@@ -46,7 +46,6 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied_text' | 'copied_md'>('idle');
-  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help' | 'history'>('input');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
