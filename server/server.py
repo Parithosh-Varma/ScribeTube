@@ -2,10 +2,23 @@ import os
 import json
 import re
 import html
+import time
+import threading
 from datetime import datetime
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    CouldNotRetrieveTranscript,
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    VideoUnavailable,
+    VideoUnplayable,
+    InvalidVideoId,
+    RequestBlocked,
+    IpBlocked,
+)
+from youtube_transcript_api.proxies import GenericProxyConfig
 import requests
 
 try:
@@ -61,6 +74,29 @@ def init_db():
 if DATABASE_URL and HAS_DB:
     init_db()
 
+TRANSCRIPT_TIMEOUT = 3
+
+def _run_with_timeout(func, *args, timeout=TRANSCRIPT_TIMEOUT, **kwargs):
+    result = [None]
+    exception = [None]
+
+    def target():
+        try:
+            result[0] = func(*args, **kwargs)
+        except Exception as e:
+            exception[0] = e
+
+    t = threading.Thread(target=target, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+    if t.is_alive():
+        raise TimeoutError(f"Method timed out after {timeout}s")
+    if exception[0] is not None:
+        raise exception[0]
+    return result[0]
+
+_favorites_cache = {"data": None, "timestamp": 0}
+_FAVORITES_CACHE_TTL = 30
 
 @app.route("/")
 def index():
@@ -82,14 +118,23 @@ def get_proxy_config():
     return None
 
 def fetch_transcript_via_api(video_id):
-    proxies = get_proxy_config()
+    proxy_config = None
+    proxy_url = os.environ.get("YOUTUBE_PROXY")
+    if proxy_url:
+        proxy_config = GenericProxyConfig(
+            http_url=proxy_url,
+            https_url=proxy_url,
+        )
+
     cookies_path = os.environ.get("YOUTUBE_COOKIES")
-    api_kwargs = {}
-    if proxies:
-        api_kwargs["proxies"] = proxies
+    http_client = requests.Session()
     if cookies_path and os.path.isfile(cookies_path):
-        api_kwargs["cookies"] = cookies_path
-    api = YouTubeTranscriptApi(**api_kwargs)
+        try:
+            http_client.cookies = _load_netscape_cookies(cookies_path)
+        except Exception:
+            pass
+
+    api = YouTubeTranscriptApi(proxy_config=proxy_config, http_client=http_client)
     transcript_list = api.list(video_id)
     if not transcript_list:
         return None
@@ -108,6 +153,13 @@ def fetch_transcript_via_api(video_id):
             "duration": seg.duration,
         })
     return result if result else None
+
+
+def _load_netscape_cookies(path):
+    from http.cookiejar import MozillaCookieJar
+    jar = MozillaCookieJar(path)
+    jar.load(ignore_discard=True, ignore_expires=True)
+    return jar
 
 def _extract_json_from_youtube_page(html_text):
     markers = ["ytInitialPlayerResponse = ", "window.ytInitialPlayerResponse = "]
@@ -308,30 +360,56 @@ def get_transcript():
     last_error = ""
 
     try:
-        result = fetch_transcript_via_invidious(video_id)
+        result = _run_with_timeout(fetch_transcript_via_invidious, video_id)
+    except TimeoutError:
+        last_error = "Invidious: timed out"
     except Exception as e:
-        last_error = f"Invidious method: {e}"
+        last_error = f"Invidious: {e}"
 
     if not result:
         try:
-            result = fetch_transcript_via_api(video_id)
+            result = _run_with_timeout(fetch_transcript_via_api, video_id)
+        except TranscriptsDisabled:
+            return jsonify({"error": "Transcripts are disabled for this video"}), 404
+        except NoTranscriptFound:
+            return jsonify({"error": "No transcript found for this video"}), 404
+        except InvalidVideoId:
+            return jsonify({"error": "Invalid video ID provided"}), 400
+        except (RequestBlocked, IpBlocked):
+            return jsonify({
+                "error": "YouTube is blocking transcript access from this server. "
+                         "Try running the app locally or add a residential proxy via the YOUTUBE_PROXY environment variable."
+            }), 503
+        except (VideoUnavailable, VideoUnplayable):
+            return jsonify({"error": "This video is unavailable or unplayable"}), 404
+        except TimeoutError:
+            last_error = f"{last_error}; youtube-transcript-api: timed out"
+        except CouldNotRetrieveTranscript as e:
+            last_error = f"{last_error}; youtube-transcript-api: {e}"
         except Exception as e:
-            last_error = f"{last_error}; API method: {e}"
+            last_error = f"{last_error}; youtube-transcript-api: {e}"
 
     if not result:
         try:
-            result = fetch_transcript_via_youtubetranscript(video_id)
+            result = _run_with_timeout(fetch_transcript_via_youtubetranscript, video_id)
+        except TimeoutError:
+            last_error = f"{last_error}; youtubetranscript.com: timed out"
         except Exception as e:
             last_error = f"{last_error}; youtubetranscript.com: {e}"
 
     if not result:
         try:
-            result = fetch_transcript_via_scraping(video_id)
+            result = _run_with_timeout(fetch_transcript_via_scraping, video_id)
+        except TimeoutError:
+            last_error = f"{last_error}; Scraping: timed out"
         except Exception as e:
-            last_error = f"{last_error}; Scraping method: {e}"
+            last_error = f"{last_error}; Scraping: {e}"
 
     if not result:
-        return jsonify({"error": last_error or "Could not retrieve transcript"}), 500
+        return jsonify({
+            "error": "All transcript sources failed. YouTube may be blocking this server's IP. "
+                     "Try running the app locally or add a residential proxy via the YOUTUBE_PROXY environment variable."
+        }), 503
 
     return jsonify(result)
 
@@ -403,6 +481,9 @@ def delete_history(item_id):
 def get_favorites():
     if not DATABASE_URL or not HAS_DB:
         return jsonify([]), 200
+    now = time.time()
+    if _favorites_cache["data"] is not None and (now - _favorites_cache["timestamp"]) < _FAVORITES_CACHE_TTL:
+        return jsonify(_favorites_cache["data"])
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("SELECT * FROM favorites ORDER BY created_at DESC")
@@ -411,6 +492,8 @@ def get_favorites():
     result = []
     for row in rows:
         result.append({k: str(v) if isinstance(v, datetime) else v for k, v in row.items()})
+    _favorites_cache["data"] = result
+    _favorites_cache["timestamp"] = now
     return jsonify(result)
 
 
@@ -428,6 +511,7 @@ def add_favorite():
         )
         row_id = cur.fetchone()[0]
         conn.close()
+        _favorites_cache["data"] = None
         return jsonify({"id": row_id, "starred": True}), 201
     except psycopg2.errors.UniqueViolation:
         conn.close()
@@ -442,6 +526,7 @@ def remove_favorite(video_id):
     cur = conn.cursor()
     cur.execute("DELETE FROM favorites WHERE video_id = %s", (video_id,))
     conn.close()
+    _favorites_cache["data"] = None
     return jsonify({"ok": True, "starred": False})
 
 
