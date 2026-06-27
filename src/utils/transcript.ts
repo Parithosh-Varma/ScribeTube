@@ -103,7 +103,7 @@ async function fetchWithProxy(url: string): Promise<string> {
 async function fetchTranscriptFromBackend(videoId: string): Promise<TranscriptSegment[]> {
   const API_BASE = window.location.port === "5173" ? "http://localhost:8080" : "";
   const res = await fetch(`${API_BASE}/api/transcript?v=${videoId}`, {
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(45000),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

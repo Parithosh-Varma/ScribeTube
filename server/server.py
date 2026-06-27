@@ -220,6 +220,84 @@ def fetch_transcript_via_youtubetranscript(video_id):
     return result if result else None
 
 
+INVIDIOUS_INSTANCES = [
+    "https://inv.nadeko.net",
+    "https://invidious.privacyredirect.com",
+    "https://iv.datura.network",
+    "https://invidious.nerdvpn.de",
+    "https://inv.tux.pizza",
+    "https://invidious.io.lol",
+]
+
+
+def fetch_transcript_via_invidious(video_id):
+    proxies = get_proxy_config()
+    for instance in INVIDIOUS_INSTANCES:
+        try:
+            captions_url = f"{instance}/api/v1/captions/{video_id}"
+            resp = requests.get(captions_url, proxies=proxies, timeout=10)
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            captions = data.get("captions", [])
+            if not captions:
+                continue
+
+            track = None
+            for c in captions:
+                if c.get("language_code", "").startswith("en"):
+                    track = c
+                    break
+            if not track:
+                track = captions[0]
+
+            caption_url = track.get("url", "")
+            if not caption_url:
+                continue
+            if caption_url.startswith("/"):
+                caption_url = instance + caption_url
+
+            cap_resp = requests.get(caption_url, proxies=proxies, timeout=10)
+            if cap_resp.status_code != 200:
+                continue
+
+            content_type = cap_resp.headers.get("Content-Type", "")
+            text = cap_resp.text
+
+            if "json" in content_type:
+                items = json.loads(text) if isinstance(text, str) else text
+                if isinstance(items, list) and len(items) > 0:
+                    result = []
+                    for item in items:
+                        t = item.get("text", "")
+                        if t:
+                            result.append({
+                                "text": t,
+                                "start": float(item.get("start", 0)),
+                                "duration": float(item.get("duration", 0)),
+                            })
+                    if result:
+                        return result
+            else:
+                segments = []
+                for m in re.finditer(
+                    r'<text[^>]*start="([^"]*)"[^>]*dur="([^"]*)"[^>]*>(.*?)</text>',
+                    text,
+                    re.DOTALL,
+                ):
+                    start = float(m.group(1))
+                    duration = float(m.group(2))
+                    t = html.unescape(re.sub(r"<[^>]+>", "", m.group(3)))
+                    t = re.sub(r"\s+", " ", t).strip()
+                    if t:
+                        segments.append({"text": t, "start": start, "duration": duration})
+                if segments:
+                    return segments
+        except Exception:
+            continue
+    return None
+
+
 @app.route("/api/transcript")
 def get_transcript():
     video_id = request.args.get("v")
@@ -230,21 +308,27 @@ def get_transcript():
     last_error = ""
 
     try:
-        result = fetch_transcript_via_api(video_id)
+        result = fetch_transcript_via_invidious(video_id)
     except Exception as e:
-        last_error = f"API method: {e}"
+        last_error = f"Invidious method: {e}"
 
     if not result:
         try:
-            result = fetch_transcript_via_scraping(video_id)
+            result = fetch_transcript_via_api(video_id)
         except Exception as e:
-            last_error = f"{last_error}; Scraping method: {e}"
+            last_error = f"{last_error}; API method: {e}"
 
     if not result:
         try:
             result = fetch_transcript_via_youtubetranscript(video_id)
         except Exception as e:
             last_error = f"{last_error}; youtubetranscript.com: {e}"
+
+    if not result:
+        try:
+            result = fetch_transcript_via_scraping(video_id)
+        except Exception as e:
+            last_error = f"{last_error}; Scraping method: {e}"
 
     if not result:
         return jsonify({"error": last_error or "Could not retrieve transcript"}), 500
