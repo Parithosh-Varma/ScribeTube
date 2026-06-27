@@ -3,13 +3,18 @@ import {
   BookOpen, Settings, Copy, Download, Check, FileText,
   AlertCircle, Terminal, ChevronRight, Eye, EyeOff, RotateCcw,
   Type, Search, HelpCircle, Printer, Edit2, ListRestart,
-  Video, Sun, Moon
+  Video, Sun, Moon, Star, Clock, Trash2
 } from "lucide-react";
 import { extractVideoId, fetchVideoMetadata, fetchTranscript, formatLocalBookChapter, VideoMetadata, TranscriptSegment } from "./utils/transcript";
 import { aiProviders, generateBookChapter } from "./utils/ai";
 import { parseMarkdownToHtml } from "./utils/markdown";
 import { ProfileCard } from "./components/ProfileCard";
 import { MouseProvider } from "./components/ui/use-mouse";
+import {
+  getHistory, saveHistory, deleteHistory,
+  getFavorites, addFavorite, removeFavorite, checkFavorite,
+  HistoryItem, FavoriteItem
+} from "./utils/database";
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -41,6 +46,11 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied_text' | 'copied_md'>('idle');
+  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help' | 'history'>('input');
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [historyTab, setHistoryTab] = useState<'history' | 'favorites'>('history');
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark';
@@ -60,6 +70,63 @@ export default function App() {
   useEffect(() => {
     if (logContainerRef.current) logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
   }, [logs]);
+
+  useEffect(() => {
+    loadHistory();
+    loadFavorites();
+  }, []);
+
+  const loadHistory = async () => setHistory(await getHistory());
+  const loadFavorites = async () => setFavorites(await getFavorites());
+
+  const toggleFavorite = async () => {
+    if (!videoMetadata) return;
+    if (isFavorited) {
+      await removeFavorite(videoMetadata.id);
+      setIsFavorited(false);
+    } else {
+      await addFavorite({
+        video_id: videoMetadata.id,
+        title: videoMetadata.title,
+        channel: videoMetadata.channel,
+        thumbnail: videoMetadata.thumbnail,
+        url: videoMetadata.url,
+      });
+      setIsFavorited(true);
+    }
+    loadFavorites();
+  };
+
+  const saveToHistory = async () => {
+    if (!videoMetadata) return;
+    await saveHistory({
+      video_id: videoMetadata.id,
+      title: videoMetadata.title,
+      channel: videoMetadata.channel,
+      thumbnail: videoMetadata.thumbnail,
+      url: videoMetadata.url,
+      transcript: transcriptSegments.map(s => s.text).join("\n"),
+      chapter: formattedChapter,
+    });
+    loadHistory();
+  };
+
+  const deleteHistoryItem = async (id: number) => {
+    await deleteHistory(id);
+    loadHistory();
+  };
+
+  const loadHistoryItem = (item: HistoryItem) => {
+    setVideoMetadata({
+      id: item.video_id,
+      title: item.title,
+      channel: item.channel,
+      thumbnail: item.thumbnail,
+      url: item.url,
+    });
+    setFormattedChapter(item.chapter);
+    setActiveTab('editor');
+  };
 
   const addLog = (msg: string) => setLogs(p => [...p, `[${new Date().toLocaleTimeString([], { hour12: false })}] ${msg}`]);
   const saveApiKey = (key: string) => { setApiKey(key); localStorage.setItem(`scribetube_${provider}_key`, key); };
@@ -106,6 +173,12 @@ export default function App() {
       setTranscriptSegments(fetched.segments);
       setProgressStep('ai'); await executeAiFormatting(meta.title, meta.channel, fetched.rawText);
       setProgressStep('done'); addLog("Chapter complete!"); setActiveTab('editor'); setLeftTab('player');
+      checkFavorite(videoId).then(setIsFavorited);
+      saveHistory({
+        video_id: meta.id, title: meta.title, channel: meta.channel,
+        thumbnail: meta.thumbnail, url: meta.url,
+        transcript: fetched.rawText, chapter: formatLocalBookChapter(meta.title, meta.channel, fetched.rawText),
+      }).then(() => loadHistory());
     } catch (err: any) { setError(err.message); addLog(`[ERROR] ${err.message}`); }
     finally { setIsLoading(false); }
   };
@@ -192,11 +265,70 @@ export default function App() {
           <button onClick={() => setActiveTab(prev => prev === 'help' ? 'input' : 'help')} className={`p-2 rounded-lg transition-colors ${activeTab === 'help' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : (isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm')}`}>
             <HelpCircle className="w-4 h-4" />
           </button>
+          <button onClick={() => { setActiveTab(prev => prev === 'history' ? 'input' : 'history'); loadHistory(); loadFavorites(); }} className={`p-2 rounded-lg transition-colors ${activeTab === 'history' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : (isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm')}`}>
+            <Clock className="w-4 h-4" />
+          </button>
           <button onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} className={`p-2 rounded-lg transition-colors ${isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm'}`}>
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
         </div>
       </header>
+
+      {/* ── HISTORY VIEW ── */}
+      {activeTab === 'history' && (
+        <div className="flex-1 flex items-start justify-center p-6 animate-fade-in">
+          <div className={`max-w-3xl w-full p-8 rounded-2xl border ${isDark ? 'bg-reading-room-light border-reading-room-light' : 'bg-warm-white border-manuscript-warm'}`}>
+            <div className="flex items-center gap-4 mb-6">
+              <h2 className="font-display text-2xl font-bold">Library</h2>
+              <div className={`flex p-0.5 rounded-md border ${isDark ? 'bg-reading-room border-reading-room-light' : 'bg-manuscript border-manuscript-warm'}`}>
+                <button onClick={() => setHistoryTab('history')} className={`px-3 py-1 text-xs font-medium rounded transition-colors ${historyTab === 'history' ? (isDark ? 'bg-reading-room text-brass' : 'bg-manuscript-warm text-oxblood') : 'text-faded-ink'}`}>
+                  <Clock className="w-3 h-3 inline mr-1" /> History
+                </button>
+                <button onClick={() => setHistoryTab('favorites')} className={`px-3 py-1 text-xs font-medium rounded transition-colors ${historyTab === 'favorites' ? (isDark ? 'bg-reading-room text-brass' : 'bg-manuscript-warm text-oxblood') : 'text-faded-ink'}`}>
+                  <Star className="w-3 h-3 inline mr-1" /> Favorites ({favorites.length})
+                </button>
+              </div>
+            </div>
+
+            {historyTab === 'history' ? (
+              history.length === 0 ? (
+                <p className="text-faded-ink text-sm text-center py-10">No history yet. Generate your first chapter!</p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map(item => (
+                    <div key={item.id} className={`flex items-center gap-4 p-3 rounded-xl border cursor-pointer transition-colors ${isDark ? 'hover:bg-reading-room border-reading-room-light' : 'hover:bg-manuscript-warm border-manuscript-warm'}`} onClick={() => loadHistoryItem(item)}>
+                      {item.thumbnail && <img src={item.thumbnail} alt="" className="w-16 h-12 rounded object-cover shrink-0" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{item.title}</div>
+                        <div className="text-xs text-faded-ink">{item.channel}</div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); deleteHistoryItem(item.id); }} className="p-1.5 rounded text-faded-ink hover:text-oxblood transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              favorites.length === 0 ? (
+                <p className="text-faded-ink text-sm text-center py-10">No favorites yet. Star a video to save it!</p>
+              ) : (
+                <div className="space-y-2">
+                  {favorites.map(item => (
+                    <div key={item.id} className={`flex items-center gap-4 p-3 rounded-xl border cursor-pointer transition-colors ${isDark ? 'hover:bg-reading-room border-reading-room-light' : 'hover:bg-manuscript-warm border-manuscript-warm'}`} onClick={() => { setVideoUrl(item.url); setActiveTab('input'); }}>
+                      {item.thumbnail && <img src={item.thumbnail} alt="" className="w-16 h-12 rounded object-cover shrink-0" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{item.title}</div>
+                        <div className="text-xs text-faded-ink">{item.channel}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── HELP VIEW ── */}
       {activeTab === 'help' && (
@@ -443,9 +575,14 @@ export default function App() {
                   <h2 className="font-display text-sm font-bold truncate">{videoMetadata.title}</h2>
                 </div>
               </div>
-              <button onClick={handleReset} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-brass/30 text-faded-ink hover:text-brass hover:border-brass transition-colors">
-                <ListRestart className="w-3.5 h-3.5" /> New
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={toggleFavorite} className={`p-2 rounded-lg transition-colors ${isFavorited ? 'text-yellow-500' : 'text-faded-ink hover:text-yellow-500'}`}>
+                  <Star className={`w-4 h-4 ${isFavorited ? 'fill-yellow-500' : ''}`} />
+                </button>
+                <button onClick={handleReset} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-brass/30 text-faded-ink hover:text-brass hover:border-brass transition-colors">
+                  <ListRestart className="w-3.5 h-3.5" /> New
+                </button>
+              </div>
             </div>
           )}
 
