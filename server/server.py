@@ -62,32 +62,34 @@ def init_db():
     if not DATABASE_URL or not HAS_DB:
         return
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS history (
-            id SERIAL PRIMARY KEY,
-            video_id VARCHAR(20) NOT NULL,
-            title TEXT NOT NULL,
-            channel TEXT,
-            thumbnail TEXT,
-            url TEXT,
-            transcript TEXT,
-            chapter TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS favorites (
-            id SERIAL PRIMARY KEY,
-            video_id VARCHAR(20) NOT NULL UNIQUE,
-            title TEXT NOT NULL,
-            channel TEXT,
-            thumbnail TEXT,
-            url TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                id SERIAL PRIMARY KEY,
+                video_id VARCHAR(20) NOT NULL,
+                title TEXT NOT NULL,
+                channel TEXT,
+                thumbnail TEXT,
+                url TEXT,
+                transcript TEXT,
+                chapter TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS favorites (
+                id SERIAL PRIMARY KEY,
+                video_id VARCHAR(20) NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                channel TEXT,
+                thumbnail TEXT,
+                url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+    finally:
+        conn.close()
 
 if DATABASE_URL and HAS_DB:
     init_db()
@@ -459,11 +461,13 @@ def get_history():
     if not DATABASE_URL or not HAS_DB:
         return jsonify([]), 200
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM history ORDER BY created_at DESC LIMIT 50")
-    rows = cur.fetchall()
-    conn.close()
-    return jsonify([{k: str(v) if isinstance(v, datetime) else v for k, v in row.items()} for row in rows])
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM history ORDER BY created_at DESC LIMIT 50")
+        rows = cur.fetchall()
+        return jsonify([{k: str(v) if isinstance(v, datetime) else v for k, v in row.items()} for row in rows])
+    finally:
+        conn.close()
 
 
 @app.route("/api/history", methods=["POST"])
@@ -471,15 +475,19 @@ def save_history():
     if not DATABASE_URL or not HAS_DB:
         return jsonify({"error": "Database not configured"}), 503
     data = request.json
+    if not data:
+        return jsonify({"error": "Invalid JSON body"}), 400
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO history (video_id, title, channel, thumbnail, url, transcript, chapter) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (data.get("video_id"), data.get("title"), data.get("channel"), data.get("thumbnail"), data.get("url"), data.get("transcript"), data.get("chapter"))
-    )
-    row_id = cur.fetchone()[0]
-    conn.close()
-    return jsonify({"id": row_id}), 201
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO history (video_id, title, channel, thumbnail, url, transcript, chapter) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (data.get("video_id"), data.get("title"), data.get("channel"), data.get("thumbnail"), data.get("url"), data.get("transcript"), data.get("chapter"))
+        )
+        row_id = cur.fetchone()[0]
+        return jsonify({"id": row_id}), 201
+    finally:
+        conn.close()
 
 
 @app.route("/api/history/<int:item_id>", methods=["DELETE"])
@@ -487,10 +495,12 @@ def delete_history(item_id):
     if not DATABASE_URL or not HAS_DB:
         return jsonify({"error": "Database not configured"}), 503
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM history WHERE id = %s", (item_id,))
-    conn.close()
-    return jsonify({"ok": True})
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM history WHERE id = %s", (item_id,))
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
 
 
 # ── FAVORITES ──
@@ -503,16 +513,18 @@ def get_favorites():
     if _favorites_cache["data"] is not None and (now - _favorites_cache["timestamp"]) < _FAVORITES_CACHE_TTL:
         return jsonify(_favorites_cache["data"])
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM favorites ORDER BY created_at DESC")
-    rows = cur.fetchall()
-    conn.close()
-    result = []
-    for row in rows:
-        result.append({k: str(v) if isinstance(v, datetime) else v for k, v in row.items()})
-    _favorites_cache["data"] = result
-    _favorites_cache["timestamp"] = now
-    return jsonify(result)
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM favorites ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        result = []
+        for row in rows:
+            result.append({k: str(v) if isinstance(v, datetime) else v for k, v in row.items()})
+        _favorites_cache["data"] = result
+        _favorites_cache["timestamp"] = now
+        return jsonify(result)
+    finally:
+        conn.close()
 
 
 @app.route("/api/favorites", methods=["POST"])
@@ -520,20 +532,23 @@ def add_favorite():
     if not DATABASE_URL or not HAS_DB:
         return jsonify({"error": "Database not configured"}), 503
     data = request.json
+    if not data:
+        return jsonify({"error": "Invalid JSON body"}), 400
     conn = get_db()
-    cur = conn.cursor()
     try:
-        cur.execute(
-            "INSERT INTO favorites (video_id, title, channel, thumbnail, url) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (data.get("video_id"), data.get("title"), data.get("channel"), data.get("thumbnail"), data.get("url"))
-        )
-        row_id = cur.fetchone()[0]
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO favorites (video_id, title, channel, thumbnail, url) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (data.get("video_id"), data.get("title"), data.get("channel"), data.get("thumbnail"), data.get("url"))
+            )
+            row_id = cur.fetchone()[0]
+            _favorites_cache["data"] = None
+            return jsonify({"id": row_id, "starred": True}), 201
+        except psycopg2.errors.UniqueViolation:
+            return jsonify({"error": "Already in favorites"}), 409
+    finally:
         conn.close()
-        _favorites_cache["data"] = None
-        return jsonify({"id": row_id, "starred": True}), 201
-    except psycopg2.errors.UniqueViolation:
-        conn.close()
-        return jsonify({"error": "Already in favorites"}), 409
 
 
 @app.route("/api/favorites/<video_id>", methods=["DELETE"])
@@ -541,11 +556,13 @@ def remove_favorite(video_id):
     if not DATABASE_URL or not HAS_DB:
         return jsonify({"error": "Database not configured"}), 503
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM favorites WHERE video_id = %s", (video_id,))
-    conn.close()
-    _favorites_cache["data"] = None
-    return jsonify({"ok": True, "starred": False})
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM favorites WHERE video_id = %s", (video_id,))
+        _favorites_cache["data"] = None
+        return jsonify({"ok": True, "starred": False})
+    finally:
+        conn.close()
 
 
 @app.route("/api/favorites/check/<video_id>", methods=["GET"])
@@ -553,11 +570,13 @@ def check_favorite(video_id):
     if not DATABASE_URL or not HAS_DB:
         return jsonify({"starred": False}), 200
     conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM favorites WHERE video_id = %s", (video_id,))
-    exists = cur.fetchone() is not None
-    conn.close()
-    return jsonify({"starred": exists})
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM favorites WHERE video_id = %s", (video_id,))
+        exists = cur.fetchone() is not None
+        return jsonify({"starred": exists})
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,3 @@
-"use client";
-
-import React from "react";
 import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 const GithubIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

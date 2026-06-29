@@ -1,9 +1,6 @@
-"use client";
-
 import React, { useRef } from "react";
 import { cn } from "@/utils/cn";
-import { AnimatePresence, motion } from "framer-motion";
-import { useMouse } from "./use-mouse";
+import { motion } from "framer-motion";
 
 export const CardContainer = ({
   children,
@@ -15,7 +12,6 @@ export const CardContainer = ({
   containerClassName?: string;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mouseX, mouseY } = useMouse();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -26,7 +22,7 @@ export const CardContainer = ({
     containerRef.current.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
   };
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseLeave = () => {
     if (!containerRef.current) return;
     containerRef.current.style.transform = `rotateY(0deg) rotateX(0deg)`;
   };
@@ -98,7 +94,6 @@ export const CardItem = ({
   [key: string]: any;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const { mouseX, mouseY } = useMouse();
 
   return (
     <motion.div

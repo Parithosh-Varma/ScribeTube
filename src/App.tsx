@@ -96,20 +96,6 @@ export default function App() {
     loadFavorites();
   };
 
-  const saveToHistory = async () => {
-    if (!videoMetadata) return;
-    await saveHistory({
-      video_id: videoMetadata.id,
-      title: videoMetadata.title,
-      channel: videoMetadata.channel,
-      thumbnail: videoMetadata.thumbnail,
-      url: videoMetadata.url,
-      transcript: transcriptSegments.map(s => s.text).join("\n"),
-      chapter: formattedChapter,
-    });
-    loadHistory();
-  };
-
   const deleteHistoryItem = async (id: number) => {
     await deleteHistory(id);
     loadHistory();

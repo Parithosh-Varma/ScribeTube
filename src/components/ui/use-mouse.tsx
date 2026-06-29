@@ -1,6 +1,4 @@
-"use client";
-
-import React, { createContext, useState, useContext, useRef, useEffect } from "react";
+import React, { createContext, useContext, useRef, useEffect } from "react";
 
 interface MouseContextType {
   mouseX: React.RefObject<number | null>;
