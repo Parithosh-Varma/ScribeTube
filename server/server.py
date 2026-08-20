@@ -39,6 +39,9 @@ from youtube_transcript_api._errors import (
 from youtube_transcript_api.proxies import GenericProxyConfig
 import requests
 
+from ingest.chat_import import parse_chat_export
+from ingest.rss_import import fetch_feed
+
 try:
     import psycopg2
     import psycopg2.extras
@@ -88,6 +91,25 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sources (
+                id SERIAL PRIMARY KEY,
+                type VARCHAR(20) NOT NULL DEFAULT 'video',
+                title TEXT NOT NULL,
+                source_name TEXT,
+                url TEXT,
+                thumbnail TEXT,
+                raw_content TEXT,
+                processed_content TEXT,
+                tags TEXT[] DEFAULT '{}',
+                dedupe_key TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_type ON sources (type)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_created ON sources (created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_tags ON sources USING GIN (tags)")
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sources_dedupe ON sources (dedupe_key)")
     finally:
         conn.close()
 
@@ -575,6 +597,120 @@ def check_favorite(video_id):
         cur.execute("SELECT id FROM favorites WHERE video_id = %s", (video_id,))
         exists = cur.fetchone() is not None
         return jsonify({"starred": exists})
+    finally:
+        conn.close()
+
+
+# ── SOURCES (Knowledge OS) ──
+
+def _row_to_dict(row):
+    return {k: str(v) if isinstance(v, datetime) else v for k, v in row.items()}
+
+
+@app.route("/api/sources", methods=["GET"])
+def list_sources():
+    if not DATABASE_URL or not HAS_DB:
+        return jsonify([]), 200
+    stype = request.args.get("type")
+    q = request.args.get("q")
+    tag = request.args.get("tag")
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        where, params = [], []
+        if stype:
+            where.append("type = %s")
+            params.append(stype)
+        if tag:
+            where.append("tags && %s")
+            params.append([tag])
+        if q:
+            where.append("(title ILIKE %s OR raw_content ILIKE %s OR processed_content ILIKE %s)")
+            like = f"%{q}%"
+            params.extend([like, like, like])
+        sql = "SELECT * FROM sources"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY created_at DESC LIMIT 100"
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        return jsonify([_row_to_dict(row) for row in rows])
+    finally:
+        conn.close()
+
+
+@app.route("/api/sources/<int:source_id>", methods=["DELETE"])
+def delete_source(source_id):
+    if not DATABASE_URL or not HAS_DB:
+        return jsonify({"error": "Database not configured"}), 503
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM sources WHERE id = %s", (source_id,))
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
+
+
+@app.route("/api/import-chat", methods=["POST"])
+def import_chat():
+    if not DATABASE_URL or not HAS_DB:
+        return jsonify({"error": "Database not configured"}), 503
+    data = request.json
+    if not data or not data.get("content"):
+        return jsonify({"error": "Missing 'content'"}), 400
+    try:
+        parsed = parse_chat_export(data["content"])
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO sources (type, title, source_name, url, raw_content, processed_content, tags, dedupe_key)
+               VALUES ('chat', %s, %s, %s, %s, %s, %s, %s)
+               ON CONFLICT (dedupe_key) DO NOTHING RETURNING id""",
+            (parsed["title"], parsed["platform"], parsed["url"], parsed["raw"], parsed["processed"], parsed["tags"], parsed["dedupe_key"]),
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "Already imported", "deduped": True}), 409
+        return jsonify({"id": row[0], "title": parsed["title"], "deduped": False}), 201
+    finally:
+        conn.close()
+
+
+@app.route("/api/import-rss", methods=["POST"])
+def import_rss():
+    if not DATABASE_URL or not HAS_DB:
+        return jsonify({"error": "Database not configured"}), 503
+    data = request.json
+    if not data or not data.get("url"):
+        return jsonify({"error": "Missing 'url'"}), 400
+    try:
+        max_items = max(1, min(int(data.get("max_items") or 3), 10))
+    except (TypeError, ValueError):
+        max_items = 3
+    try:
+        items = fetch_feed(data["url"], max_items)
+    except Exception as e:
+        return jsonify({"error": f"Feed fetch failed: {e}"}), 502
+    if not items:
+        return jsonify({"imported": 0, "skipped": 0}), 200
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        imported = 0
+        for item in items:
+            cur.execute(
+                """INSERT INTO sources (type, title, source_name, url, raw_content, tags, dedupe_key)
+                   VALUES ('link', %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (dedupe_key) DO NOTHING RETURNING id""",
+                (item["title"], item["source"], item["link"], item["summary"], ["link", "rss"], item["key"]),
+            )
+            if cur.fetchone():
+                imported += 1
+        return jsonify({"imported": imported, "skipped": len(items) - imported}), 201
     finally:
         conn.close()
 

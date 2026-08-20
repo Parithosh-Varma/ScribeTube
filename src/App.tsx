@@ -3,7 +3,8 @@ import {
   BookOpen, Settings, Copy, Download, Check, FileText,
   AlertCircle, Terminal, ChevronRight, Eye, EyeOff, RotateCcw,
   Type, Search, HelpCircle, Printer, Edit2, ListRestart,
-  Video, Sun, Moon, Star, Clock, Trash2
+  Video, Sun, Moon, Star, Clock, Trash2, Library, Upload, Rss,
+  MessageSquare, X, ExternalLink
 } from "lucide-react";
 import { extractVideoId, fetchVideoMetadata, fetchTranscript, formatLocalBookChapter, VideoMetadata, TranscriptSegment } from "./utils/transcript";
 import { aiProviders, generateBookChapter } from "./utils/ai";
@@ -15,13 +16,17 @@ import {
   getFavorites, addFavorite, removeFavorite, checkFavorite,
   HistoryItem, FavoriteItem
 } from "./utils/database";
+import {
+  getSources, importChat, importRss, deleteSource,
+  SourceItem
+} from "./utils/sources";
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem("scribetube_theme");
     return saved === "light" ? "light" : "dark";
   });
-  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help' | 'history'>('input');
+  const [activeTab, setActiveTab] = useState<'input' | 'editor' | 'help' | 'history' | 'import'>('input');
   const [videoUrl, setVideoUrl] = useState("");
   const [provider, setProvider] = useState(() => localStorage.getItem("scribetube_provider") || "local");
   const [apiKey, setApiKey] = useState(() => {
@@ -50,6 +55,18 @@ export default function App() {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
   const [historyTab, setHistoryTab] = useState<'history' | 'favorites'>('history');
+  const [importTab, setImportTab] = useState<'chat' | 'rss'>('chat');
+  const [chatJson, setChatJson] = useState("");
+  const [rssUrl, setRssUrl] = useState("");
+  const [rssMax, setRssMax] = useState(3);
+  const [sources, setSources] = useState<SourceItem[]>([]);
+  const [sourcesQuery, setSourcesQuery] = useState("");
+  const [sourcesType, setSourcesType] = useState<'all' | 'video' | 'chat' | 'link'>('all');
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [viewSource, setViewSource] = useState<SourceItem | null>(null);
+  const [viewCopied, setViewCopied] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark';
@@ -77,6 +94,59 @@ export default function App() {
 
   const loadHistory = async () => setHistory(await getHistory());
   const loadFavorites = async () => setFavorites(await getFavorites());
+
+  const loadSources = async () =>
+    setSources(await getSources({ q: sourcesQuery || undefined, type: sourcesType === 'all' ? undefined : sourcesType }));
+
+  useEffect(() => {
+    const t = setTimeout(loadSources, 300);
+    return () => clearTimeout(t);
+  }, [sourcesQuery, sourcesType]);
+
+  const handleChatFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setChatJson(String(reader.result || ""));
+    reader.readAsText(file);
+  };
+
+  const handleImportChat = async () => {
+    setImportBusy(true); setImportMsg(null); setImportErr(null);
+    const res = await importChat(chatJson);
+    if (res.ok) {
+      setImportMsg(res.title ? `Imported "${res.title}"` : "Imported");
+      setChatJson("");
+      loadSources();
+    } else {
+      setImportErr(res.error || "Import failed");
+    }
+    setImportBusy(false);
+  };
+
+  const handleImportRss = async () => {
+    setImportBusy(true); setImportMsg(null); setImportErr(null);
+    const res = await importRss(rssUrl, rssMax);
+    if (res.ok) {
+      setImportMsg(`Imported ${res.imported} item${res.imported === 1 ? "" : "s"}, skipped ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"}`);
+      loadSources();
+    } else {
+      setImportErr(res.error || "Import failed");
+    }
+    setImportBusy(false);
+  };
+
+  const handleDeleteSource = async (id: number) => {
+    await deleteSource(id);
+    loadSources();
+  };
+
+  const handleViewCopy = async () => {
+    if (!viewSource) return;
+    navigator.clipboard.writeText(viewSource.processed_content || viewSource.raw_content || "");
+    setViewCopied(true);
+    setTimeout(() => setViewCopied(false), 2000);
+  };
 
   const toggleFavorite = async () => {
     if (!videoMetadata) return;
@@ -253,6 +323,9 @@ export default function App() {
           <button onClick={() => { setActiveTab(prev => prev === 'history' ? 'input' : 'history'); loadHistory(); loadFavorites(); }} className={`p-2 rounded-lg transition-colors ${activeTab === 'history' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : (isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm')}`}>
             <Clock className="w-4 h-4" />
           </button>
+          <button onClick={() => { setActiveTab(prev => prev === 'import' ? 'input' : 'import'); loadSources(); }} className={`p-2 rounded-lg transition-colors ${activeTab === 'import' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : (isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm')}`}>
+            <Library className="w-4 h-4" />
+          </button>
           <button onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} className={`p-2 rounded-lg transition-colors ${isDark ? 'text-faded-ink hover:text-manuscript hover:bg-reading-room-light' : 'text-faded-ink hover:text-graphite hover:bg-manuscript-warm'}`}>
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -352,6 +425,147 @@ export default function App() {
             </div>
             <div className="mt-8 flex justify-center">
               <ProfileCard />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── IMPORT / KNOWLEDGE BASE VIEW ── */}
+      {activeTab === 'import' && (
+        <div className="flex-1 flex flex-col lg:flex-row">
+          <aside className={`w-full lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-5 transition-colors ${isDark ? 'bg-reading-room border-reading-room-light' : 'bg-manuscript border-manuscript-warm'}`}>
+            <div className="flex items-center gap-2 mb-5">
+              <Upload className="w-4 h-4 text-brass" />
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider">Import</h3>
+            </div>
+            <div className={`flex p-0.5 rounded-md border mb-4 ${isDark ? 'bg-reading-room border-reading-room-light' : 'bg-manuscript border-manuscript-warm'}`}>
+              <button onClick={() => setImportTab('chat')} className={`flex-1 px-3 py-1 text-xs font-medium rounded transition-colors ${importTab === 'chat' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : 'text-faded-ink'}`}>
+                <MessageSquare className="w-3 h-3 inline mr-1" /> Chat
+              </button>
+              <button onClick={() => setImportTab('rss')} className={`flex-1 px-3 py-1 text-xs font-medium rounded transition-colors ${importTab === 'rss' ? (isDark ? 'bg-reading-room-light text-brass' : 'bg-manuscript-warm text-oxblood') : 'text-faded-ink'}`}>
+                <Rss className="w-3 h-3 inline mr-1" /> RSS
+              </button>
+            </div>
+
+            {importTab === 'chat' ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-faded-ink mb-1.5">open-ai-scroll JSON export</label>
+                  <textarea rows={8} value={chatJson} onChange={e => setChatJson(e.target.value)} placeholder='{ "platform": {"name": "ChatGPT"}, "title": "...", "turns": [...] }' className={`w-full px-3 py-2 rounded-lg border text-xs font-mono transition-colors resize-none ${isDark ? 'bg-reading-room border-reading-room-light text-manuscript placeholder:text-faded-ink/50 focus:border-brass' : 'bg-warm-white border-manuscript-warm text-graphite placeholder:text-faded-ink/50 focus:border-oxblood'}`} />
+                </div>
+                <input type="file" accept=".json,application/json" onChange={handleChatFile} className="text-xs text-faded-ink file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-oxblood file:text-manuscript file:text-xs file:font-semibold file:cursor-pointer hover:file:bg-oxblood-hover transition-colors" />
+                <button onClick={handleImportChat} disabled={importBusy || !chatJson.trim()} className="w-full py-2.5 rounded-lg text-xs font-semibold bg-oxblood text-manuscript hover:bg-oxblood-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                  {importBusy ? <span className="w-3.5 h-3.5 border-2 border-manuscript/30 border-t-manuscript rounded-full" style={{ animation: 'spin 0.8s linear infinite' }} /> : <Upload className="w-3.5 h-3.5" />}
+                  Import chat
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-faded-ink mb-1.5">RSS / Atom feed URL</label>
+                  <input type="text" value={rssUrl} onChange={e => setRssUrl(e.target.value)} placeholder="https://hnrss.org/frontpage" className={`w-full px-3 py-2 rounded-lg border text-sm font-mono transition-colors ${isDark ? 'bg-reading-room border-reading-room-light text-manuscript placeholder:text-faded-ink/50 focus:border-brass' : 'bg-warm-white border-manuscript-warm text-graphite placeholder:text-faded-ink/50 focus:border-oxblood'}`} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-faded-ink mb-1.5">Items per feed</label>
+                  <select value={rssMax} onChange={e => setRssMax(Number(e.target.value))} className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors ${isDark ? 'bg-reading-room-light border-reading-room-light text-manuscript focus:border-brass' : 'bg-warm-white border-manuscript-warm text-graphite focus:border-oxblood'}`}>
+                    {[1, 3, 5, 10].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                <button onClick={handleImportRss} disabled={importBusy || !rssUrl.trim()} className="w-full py-2.5 rounded-lg text-xs font-semibold bg-oxblood text-manuscript hover:bg-oxblood-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                  {importBusy ? <span className="w-3.5 h-3.5 border-2 border-manuscript/30 border-t-manuscript rounded-full" style={{ animation: 'spin 0.8s linear infinite' }} /> : <Rss className="w-3.5 h-3.5" />}
+                  Import feed
+                </button>
+              </div>
+            )}
+
+            {importMsg && (
+              <div className={`mt-4 p-3 rounded-lg border text-xs animate-fade-in ${isDark ? 'bg-brass/10 border-brass/30 text-brass' : 'bg-brass/5 border-brass/30 text-oxblood'}`}>
+                {importMsg}
+              </div>
+            )}
+            {importErr && (
+              <div className={`mt-4 p-3 rounded-lg border text-xs flex items-start gap-2 animate-fade-in ${isDark ? 'bg-oxblood-dark/20 border-oxblood/30 text-oxblood-hover' : 'bg-oxblood/5 border-oxblood/20 text-oxblood'}`}>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{importErr}</span>
+              </div>
+            )}
+          </aside>
+
+          <div className="flex-1 flex flex-col p-6">
+            <div className="max-w-3xl w-full mx-auto">
+              <div className="flex items-center gap-4 mb-5">
+                <h2 className="font-display text-2xl font-bold">Knowledge Base</h2>
+                <div className="relative flex-1 max-w-sm ml-auto">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-faded-ink" />
+                  <input type="text" value={sourcesQuery} onChange={e => setSourcesQuery(e.target.value)} placeholder="Search sources..." className={`w-full pl-8 pr-3 py-2 rounded-lg border text-sm transition-colors ${isDark ? 'bg-reading-room-light border-reading-room-light text-manuscript placeholder:text-faded-ink/50 focus:border-brass' : 'bg-warm-white border-manuscript-warm text-graphite placeholder:text-faded-ink/50 focus:border-oxblood'}`} />
+                </div>
+              </div>
+              <div className="flex gap-2 mb-4">
+                {([['all', 'All'], ['video', 'Videos'], ['chat', 'Chats'], ['link', 'Links']] as const).map(([id, label]) => (
+                  <button key={id} onClick={() => setSourcesType(id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${sourcesType === id ? 'bg-oxblood text-manuscript border-oxblood' : (isDark ? 'border-reading-room-light text-faded-ink hover:text-manuscript' : 'border-manuscript-warm text-faded-ink hover:text-graphite')}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {sources.length === 0 ? (
+                  <p className="text-faded-ink text-sm text-center py-10">No sources yet. Import a chat export or an RSS feed.</p>
+                ) : (
+                  sources.map(src => (
+                    <div key={src.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${isDark ? 'hover:bg-reading-room border-reading-room-light' : 'hover:bg-manuscript-warm border-manuscript-warm'}`} onClick={() => setViewSource(src)}>
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${src.type === 'chat' ? 'bg-brass/10 text-brass' : src.type === 'link' ? 'bg-oxblood/10 text-oxblood' : 'bg-faded-ink/10 text-faded-ink'}`}>
+                        {src.type === 'chat' ? <MessageSquare className="w-4 h-4" /> : src.type === 'link' ? <Rss className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold truncate">{src.title}</span>
+                          <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${src.type === 'chat' ? 'bg-brass/10 text-brass' : src.type === 'link' ? 'bg-oxblood/10 text-oxblood' : 'bg-faded-ink/10 text-faded-ink'}`}>{src.type}</span>
+                        </div>
+                        <div className="text-xs text-faded-ink truncate">
+                          {src.source_name || "Unknown source"}{src.tags && src.tags.length ? ` · ${src.tags.join(", ")}` : ""}
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-faded-ink shrink-0">{new Date(src.created_at).toLocaleDateString()}</div>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteSource(src.id); }} className="p-1.5 rounded text-faded-ink hover:text-oxblood transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SOURCE VIEWER MODAL ── */}
+      {viewSource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in" onClick={() => setViewSource(null)}>
+          <div className={`max-w-2xl w-full max-h-[85vh] flex flex-col rounded-2xl border overflow-hidden ${isDark ? 'bg-reading-room border-reading-room-light' : 'bg-warm-white border-manuscript-warm'}`} onClick={(e) => e.stopPropagation()}>
+            <div className={`flex items-center justify-between px-5 py-4 border-b ${isDark ? 'border-reading-room-light' : 'border-manuscript-warm'}`}>
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-brass">{viewSource.type} · {viewSource.source_name || "Source"}</div>
+                <h3 className="font-display text-sm font-bold truncate">{viewSource.title}</h3>
+              </div>
+              <button onClick={() => setViewSource(null)} className="p-1.5 rounded text-faded-ink hover:text-oxblood transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-manuscript text-graphite">
+              <article className="max-w-none text-justify font-display text-base">
+                <div dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(viewSource.processed_content || viewSource.raw_content || "", 'serif') }} />
+              </article>
+            </div>
+            <div className={`flex items-center gap-2 p-4 border-t ${isDark ? 'border-reading-room-light' : 'border-manuscript-warm'}`}>
+              <button onClick={handleViewCopy} className="px-4 py-2 rounded-lg text-xs font-semibold bg-oxblood text-manuscript hover:bg-oxblood-hover transition-colors flex items-center gap-1.5">
+                {viewCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {viewCopied ? "Copied!" : "Copy Markdown"}
+              </button>
+              {viewSource.url && (
+                <a href={viewSource.url} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-lg text-xs font-semibold border border-brass/30 text-faded-ink hover:text-brass hover:border-brass transition-colors flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" /> Open original
+                </a>
+              )}
             </div>
           </div>
         </div>
