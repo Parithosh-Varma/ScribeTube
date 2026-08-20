@@ -88,6 +88,23 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sources (
+                id SERIAL PRIMARY KEY,
+                type VARCHAR(20) NOT NULL DEFAULT 'video',
+                title TEXT NOT NULL,
+                source_name TEXT,
+                url TEXT,
+                thumbnail TEXT,
+                raw_content TEXT,
+                processed_content TEXT,
+                tags TEXT[] DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_type ON sources (type)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_created ON sources (created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sources_tags ON sources USING GIN (tags)")
     finally:
         conn.close()
 
